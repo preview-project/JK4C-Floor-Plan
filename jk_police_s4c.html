@@ -1,0 +1,2441 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>S4C Headquarters — J&amp;K Police</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              valley: "#13263A",
+              valley2: "#1F3A52",
+              snow: "#EEF3F5",
+              mist: "#C9D5DC",
+              chinar: "#B5361F",
+              deodar: "#2E5B4C",
+              walnut: "#6B4A33",
+            },
+            fontFamily: { archivo: ["Archivo", "system-ui", "sans-serif"] },
+          },
+        },
+      };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <style>
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+        background: #13263a;
+      }
+      body {
+        font-family: "Archivo", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wide {
+        font-stretch: 125%;
+      }
+      .narrow {
+        font-stretch: 85%;
+      }
+      button:focus-visible {
+        outline: 2px solid #b5361f;
+        outline-offset: 2px;
+      }
+
+      .sheet {
+        background: rgba(238, 243, 245, 0.94);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 18px 40px -22px rgba(9, 20, 33, 0.75);
+      }
+
+      /* Section-drawing floor selector */
+      .sec-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 3px 8px 3px 4px;
+        border-radius: 4px;
+        text-align: left;
+        color: #13263a;
+      }
+      .sec-row:hover {
+        background: rgba(19, 38, 58, 0.06);
+      }
+      .band {
+        flex: none;
+        width: 52px;
+        height: 20px;
+        border: 1.5px dashed #8fa3b3;
+        border-radius: 1px;
+        transition:
+          background 0.4s,
+          border-color 0.4s;
+        position: relative;
+      }
+      .band.roof {
+        height: 9px;
+        width: 52px;
+        margin: 5px 0 6px;
+      }
+      .band.roof::after {
+        content: "";
+        position: absolute;
+        left: 34px;
+        bottom: 100%;
+        width: 1.5px;
+        height: 12px;
+        background: currentColor;
+        opacity: 0.35;
+      }
+      .sec-row.built .band {
+        background: #1f3a52;
+        border: 1.5px solid #1f3a52;
+      }
+      .sec-row.active .band {
+        background: #b5361f;
+        border-color: #b5361f;
+      }
+      .sec-row .code {
+        width: 22px;
+        font-weight: 700;
+        font-stretch: 125%;
+        font-size: 15px;
+      }
+      .sec-row .name {
+        font-size: 13px;
+        color: #42566a;
+        white-space: nowrap;
+      }
+      .sec-row.active .name {
+        color: #13263a;
+        font-weight: 600;
+      }
+      .sec-row.active .code {
+        color: #b5361f;
+      }
+      .ground {
+        position: relative;
+        height: 15px;
+        margin: 2px 0;
+      }
+      .ground::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 7px;
+        height: 2px;
+        background: #6b4a33;
+      }
+      .ground::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        width: 64px;
+        top: 9px;
+        height: 6px;
+        background: repeating-linear-gradient(
+          135deg,
+          #6b4a33 0 1.5px,
+          transparent 1.5px 5px
+        );
+      }
+      .ground span {
+        position: absolute;
+        left: 70px;
+        top: -1px;
+        font-size: 11px;
+        color: #6b4a33;
+        background: rgba(238, 243, 245, 0.94);
+        padding: 0 4px;
+        font-style: italic;
+      }
+
+      /* In-scene room tags */
+      #labels {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 10;
+        overflow: hidden;
+      }
+      .tag3d {
+        position: absolute;
+        transform: translate(-50%, -100%);
+        white-space: nowrap;
+        transition: opacity 0.25s;
+      }
+      .tag3d .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 11px 5px 8px;
+        border-radius: 3px;
+        background: rgba(238, 243, 245, 0.95);
+        color: #13263a;
+        font-size: 12px;
+        font-weight: 600;
+        box-shadow: 0 8px 20px -10px rgba(9, 20, 33, 0.8);
+      }
+      .tag3d .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--c);
+      }
+      .tag3d .stem {
+        width: 1.5px;
+        height: 18px;
+        margin: 0 auto;
+        background: rgba(238, 243, 245, 0.9);
+      }
+      .tag3d .foot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        margin: -1px auto 0;
+        background: var(--c);
+        box-shadow: 0 0 0 2px rgba(238, 243, 245, 0.9);
+      }
+      .pop {
+        animation: pop 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      @keyframes pop {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -80%);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -100%);
+        }
+      }
+
+      .tool.on {
+        background: #13263a;
+        color: #eef3f5;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .pop {
+          animation: none;
+        }
+        .band {
+          transition: none;
+        }
+      }
+      @media (max-width: 767px) {
+        .sec-row .name {
+          display: none;
+        }
+        .band {
+          width: 34px;
+          height: 16px;
+        }
+        .band.roof {
+          width: 34px;
+        }
+        .band.roof::after {
+          left: 22px;
+        }
+        .ground span {
+          display: none;
+        }
+        .ground::after {
+          width: 40px;
+        }
+      }
+    </style>
+  </head>
+  <body class="text-valley">
+    <div
+      id="scene"
+      class="absolute inset-0 cursor-grab active:cursor-grabbing"
+    ></div>
+    <div id="labels"></div>
+
+    <!-- Header -->
+    <header
+      class="absolute top-0 inset-x-0 z-30 flex items-start justify-between gap-3 px-4 md:px-5 pt-4 pointer-events-none"
+    >
+      <div
+        class="sheet rounded-[4px] pl-3 pr-4 py-2.5 flex items-center gap-3 pointer-events-auto"
+      >
+        <div
+          class=""
+        >
+          <!-- <i class="fa-solid fa-shield-halved"></i> -->
+           <img src="image.png" alt="J&K Police Logo" class="w-6 h-6 object-contain" zoom="1.2" />
+        </div>
+        <div>
+          <h1
+            class="wide font-bold text-[17px] md:text-[20px] leading-none tracking-tight"
+          >
+            JK4C
+          </h1>
+          <p class="text-[12px] md:text-[13px] text-valley/70 mt-1">
+            Jammu &amp; Kashmir Police, floor plan draft
+          </p>
+        </div>
+      </div>
+      <div class="sheet rounded-[4px] p-1 flex gap-1 pointer-events-auto">
+        <button
+          id="btn-explode"
+          class="tool rounded-[3px] px-3 h-9 text-[13px] font-semibold flex items-center gap-2"
+          onclick="toggleExplode()"
+          aria-pressed="false"
+        >
+          <i class="fa-solid fa-layer-group"></i
+          ><span class="hidden sm:inline">Separate floors</span>
+        </button>
+        <button
+          id="btn-rotate"
+          class="tool rounded-[3px] px-3 h-9 text-[13px] font-semibold flex items-center gap-2"
+          onclick="toggleRotate()"
+          aria-pressed="false"
+        >
+          <i class="fa-solid fa-rotate"></i
+          ><span class="hidden sm:inline">Orbit</span>
+        </button>
+        <button
+          class="tool rounded-[3px] px-3 h-9 text-[13px] font-semibold flex items-center gap-2"
+          onclick="resetView()"
+        >
+          <i class="fa-solid fa-arrow-rotate-left"></i
+          ><span class="hidden sm:inline">Start over</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Section-drawing floor selector -->
+    <nav
+      id="section"
+      aria-label="Floors"
+      class="sheet absolute z-30 left-3 md:left-5 top-1/2 -translate-y-1/2 rounded-[4px] p-2 md:p-3 w-auto md:w-[236px]"
+    ></nav>
+
+    <!-- Floor card -->
+    <article
+      id="card"
+      class="sheet absolute z-20 left-3 right-3 top-[86px] md:left-auto md:right-5 md:top-[92px] md:w-[340px] rounded-[4px] px-5 py-4 md:py-5"
+    >
+      <div class="flex items-end gap-3">
+        <span
+          id="c-code"
+          class="wide font-extrabold text-[44px] md:text-[64px] leading-[0.8] text-chinar"
+          >B</span
+        >
+        <span id="c-level" class="text-[13px] text-valley/70 pb-0.5"
+          >Basement</span
+        >
+      </div>
+      <h2
+        id="c-title"
+        class="text-[19px] md:text-[23px] font-semibold leading-tight mt-3"
+      >
+        Parking and core infrastructure
+      </h2>
+      <ul id="c-items" class="hidden md:flex flex-wrap gap-1.5 mt-4"></ul>
+      <p
+        id="c-shown"
+        class="hidden md:block text-[13.5px] leading-relaxed text-valley/75 mt-4 border-l-2 border-chinar pl-3"
+      ></p>
+    </article>
+
+    <!-- Dock -->
+    <footer
+      class="sheet absolute z-30 bottom-4 left-1/2 -translate-x-1/2 w-[min(580px,calc(100vw-24px))] rounded-[4px] px-3 py-2.5"
+    >
+      <div class="flex items-center gap-2">
+        <button
+          class="w-10 h-10 rounded-[3px] bg-valley/5 hover:bg-valley/10 grid place-items-center"
+          onclick="prevFloor()"
+          aria-label="Floor below"
+        >
+          <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <button
+          id="play"
+          class="h-10 px-4 rounded-[3px] bg-valley text-snow font-semibold text-[14px] flex items-center gap-2"
+          onclick="togglePlay()"
+        >
+          <i id="play-icon" class="fa-solid fa-play text-[12px]"></i
+          ><span id="play-text">Play walkthrough</span>
+        </button>
+        <button
+          class="w-10 h-10 rounded-[3px] bg-valley/5 hover:bg-valley/10 grid place-items-center"
+          onclick="nextFloor()"
+          aria-label="Floor above"
+        >
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <div class="flex-1 min-w-0 pl-2">
+          <p id="status" class="text-[13.5px] font-semibold truncate">
+            Basement
+          </p>
+          <div class="h-[3px] bg-valley/10 rounded mt-1.5 overflow-hidden">
+            <div id="timer" class="h-full w-0 bg-chinar"></div>
+          </div>
+        </div>
+        <button
+          id="speed"
+          class="h-10 px-3 rounded-[3px] bg-valley/5 hover:bg-valley/10 text-[13px] font-semibold narrow"
+          onclick="cycleSpeed()"
+          aria-label="Tour speed"
+        >
+          1×
+        </button>
+      </div>
+    </footer>
+
+    <script>
+      // =====================================================================
+      //  PROGRAMME — J&K Police S4C: Basement + Ground + 4 floors + Terrace
+      // =====================================================================
+      const FLOORS = [
+        {
+          level: "Basement",
+          short: "Parking and power",
+          title: "Parking and core infrastructure",
+          items: ["Parking", "Genset / UPS room", "Electrical control room"],
+          shown:
+            "Basement parking with patrol vehicles, the genset and UPS hall, and the electrical control room with its panels.",
+          markers: [
+            { name: "Basement parking", pos: [-3.0, 1.6, 3.2], c: "#8fa3b3" },
+            { name: "Genset / UPS room", pos: [4.5, 2.0, -3.2], c: "#2E5B4C" },
+            {
+              name: "Electrical control room",
+              pos: [-3.3, 2.1, -3.5],
+              c: "#d38b2a",
+            },
+          ],
+        },
+        {
+          level: "Ground floor",
+          short: "Entry and transport",
+          title: "Stilt parking, MT office and visitor desk",
+          items: [
+            "Stilt parking",
+            "MT office",
+            "Admin",
+            "Visitor management desk",
+            "Security gate",
+          ],
+          shown:
+            "Stilt parking for official vehicles, the motor transport office, a security checkpoint and the visitor reception counter.",
+          markers: [
+            { name: "Stilt parking", pos: [-4.3, 1.7, 3.0], c: "#1F3A52" },
+            { name: "MT office", pos: [-3.0, 1.6, -3.4], c: "#d38b2a" },
+            {
+              name: "Visitor management desk",
+              pos: [4.0, 1.6, -1.6],
+              c: "#B5361F",
+            },
+            { name: "Security gate", pos: [3.6, 2.4, 3.0], c: "#2E5B4C" },
+          ],
+        },
+        {
+          level: "First floor",
+          short: "Call centre and OCWC",
+          title: "Integrated call centre and OCWC wing",
+          items: ["Integrated call centre", "OCWC wing"],
+          shown:
+            "An open call-taking hall facing a full-width video wall with a supervisor console behind it, and the OCWC wing behind glass on the right.",
+          markers: [
+            {
+              name: "Integrated call centre",
+              pos: [-2.2, 1.5, -3.3],
+              c: "#B5361F",
+            },
+            { name: "Video wall", pos: [-0.5, 2.45, -5.5], c: "#1F3A52" },
+            { name: "Supervisor console", pos: [0.2, 1.55, 1.7], c: "#d38b2a" },
+            { name: "OCWC wing", pos: [6.6, 1.6, -1.2], c: "#2E5B4C" },
+          ],
+        },
+        {
+          level: "Second floor",
+          short: "Cyber investigation",
+          title: "Cyber investigation wing",
+          items: ["Cyber investigation wing"],
+          shown:
+            "Investigation bays facing a case wall, a digital forensics lab behind glass, a case conference room and analyst desks.",
+          markers: [
+            {
+              name: "Investigation bays",
+              pos: [-1.2, 1.6, -3.3],
+              c: "#B5361F",
+            },
+            {
+              name: "Digital forensics lab",
+              pos: [6.2, 1.6, -3.2],
+              c: "#1F3A52",
+            },
+            {
+              name: "Case conference room",
+              pos: [-3.1, 1.5, 3.4],
+              c: "#d38b2a",
+            },
+            { name: "Analyst desks", pos: [2.0, 1.5, 3.1], c: "#2E5B4C" },
+          ],
+        },
+        {
+          level: "Third floor",
+          short: "DC/DR and cyber threat",
+          title: "DC/DR and cyber threat division",
+          items: [
+            "Data centre (DC)",
+            "Disaster recovery (DR)",
+            "Cyber threat division",
+          ],
+          shown:
+            "Separate data centre and disaster recovery halls with contained server rows at the back, and the cyber threat division facing its monitoring wall.",
+          markers: [
+            { name: "Data centre (DC)", pos: [-3.0, 2.6, -4.1], c: "#1F3A52" },
+            {
+              name: "Disaster recovery (DR)",
+              pos: [2.9, 2.6, -4.1],
+              c: "#2E5B4C",
+            },
+            {
+              name: "Cyber threat division",
+              pos: [1.5, 1.6, 2.4],
+              c: "#B5361F",
+            },
+          ],
+        },
+        {
+          level: "Fourth floor",
+          short: "Admin and training",
+          title: "Admin wing with training hall",
+          items: ["Admin wing", "Training hall"],
+          shown:
+            "Admin offices along the back, an officer’s cabin in the corner, and a training hall set out in rows facing a presenter wall.",
+          markers: [
+            { name: "Admin wing", pos: [3.6, 1.6, -3.3], c: "#2E5B4C" },
+            { name: "Officer’s cabin", pos: [6.6, 1.7, 3.4], c: "#d38b2a" },
+            { name: "Training hall", pos: [-1.0, 1.6, 3.4], c: "#B5361F" },
+          ],
+        },
+        {
+          level: "Terrace",
+          short: "Communication",
+          title: "Communication and technical infrastructure",
+          items: ["Communication towers", "Satellite dishes", "RF mast"],
+          shown:
+            "The complete building. The roof carries the lattice communication tower, two satellite dishes and the RF mast.",
+          markers: [
+            { name: "Satellite dishes", pos: [-4.0, 3.4, -3.5], c: "#1F3A52" },
+            { name: "RF mast", pos: [4.0, 5.4, -3.5], c: "#B5361F" },
+            { name: "Communication tower", pos: [2.0, 6.4, 2.0], c: "#2E5B4C" },
+          ],
+        },
+      ];
+
+      const SLAB_W = 18,
+        SLAB_L = 13,
+        FLOOR_H = 2.6,
+        GAP = 0.2;
+      const BASE_Y = -2.7;
+      const BUILT = 6; // B, G, 1–4
+      const TERRACE = 6;
+      const DWELL = 5200;
+      const RM = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      let scene, camera, renderer, controls;
+      let floors = [],
+        roof = null;
+      let stage = 0,
+        playing = false,
+        playTimer = null,
+        timerInt = null;
+      let exploded = false,
+        orbit = false,
+        speed = 1;
+      let tags = [];
+
+      const levelY = (i) => BASE_Y + i * (FLOOR_H * (exploded ? 2.3 : 1) + GAP);
+      const codeOf = (i) =>
+        i === 0 ? "B" : i === 1 ? "G" : i === TERRACE ? "T" : String(i - 1);
+      const dur = (ms) => (RM ? 1 : ms / speed);
+
+      let _s = 7;
+      const rnd = () => (
+        (_s = (_s * 16807) % 2147483647),
+        (_s - 1) / 2147483646
+      );
+
+      // ---------------------------------------------------------------------
+      //  Materials
+      // ---------------------------------------------------------------------
+      const std = (color, roughness = 0.6, metalness = 0, extra = {}) =>
+        new THREE.MeshStandardMaterial(
+          Object.assign({ color, roughness, metalness }, extra),
+        );
+      const basic = (c) => new THREE.MeshBasicMaterial({ color: c });
+
+      const MAT = {
+        slab: std(0x8e959b, 0.85),
+        slabEdge: std(0xe9edf0, 0.5),
+        floorStone: std(0x3a4148, 0.35, 0.05),
+        floorConcrete: std(0x5a5f63, 0.8),
+        ceiling: std(0xb9c0c5, 0.9),
+        walnut: std(0x6b4a33, 0.55),
+        bronze: std(0x8a6a4a, 0.35, 0.7),
+        core: std(0x9a9086, 0.7),
+        column: std(0xe2e5e7, 0.55),
+        glass: new THREE.MeshPhysicalMaterial({
+          color: 0xa9c6da,
+          transparent: true,
+          opacity: 0.16,
+          roughness: 0.05,
+          metalness: 0.2,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        }),
+        partition: new THREE.MeshPhysicalMaterial({
+          color: 0xd8e8f2,
+          transparent: true,
+          opacity: 0.14,
+          roughness: 0.05,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        }),
+        meadow: std(0x55613f, 0.95),
+        gravel: std(0xb3ada3, 0.75),
+        water: new THREE.MeshPhysicalMaterial({
+          color: 0x1d3a52,
+          roughness: 0.05,
+          metalness: 0.3,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.05,
+        }),
+        asphalt: std(0x2a2d31, 0.9),
+        pit: std(0x6e655b, 0.95),
+        parapet: std(0xd9dcde, 0.6),
+        trunk: std(0x4a3528, 0.9),
+        chinar1: std(0xb5361f, 0.85),
+        chinar2: std(0xcf6428, 0.85),
+        chinar3: std(0x962a18, 0.85),
+        mountain: std(0x5f7183, 0.95),
+        snowcap: std(0xf2f5f7, 0.8),
+        steel: std(0x9aa3ab, 0.4, 0.8),
+        white: std(0xf3f4f5, 0.6),
+      };
+
+      const FM = {
+        deskTop: std(0x39424d, 0.4, 0.1),
+        walnut: std(0x5e3f2a, 0.42),
+        metal: std(0x1d232b, 0.35, 0.8),
+        chrome: std(0xb8c0c8, 0.2, 1.0),
+        fabric: std(0x2c3646, 0.85),
+        leather: std(0x4a2c1d, 0.45),
+        sofa: std(0x8c3a2a, 0.8),
+        cushion: std(0xb5503b, 0.85),
+        bezel: std(0x06080c, 0.3, 0.4),
+        rack: std(0x0d1522, 0.25, 0.85),
+        rackGlass: new THREE.MeshPhysicalMaterial({
+          color: 0x7fb6d8,
+          transparent: true,
+          opacity: 0.25,
+          roughness: 0.1,
+        }),
+        divider: std(0x2e5b4c, 0.92),
+        counter: std(0xe9ecee, 0.3, 0.05),
+        pot: std(0x3a3430, 0.6),
+        leaf: std(0x2f5d3f, 0.8),
+        leaf2: std(0x3f7348, 0.8),
+        appliance: std(0xd5dae0, 0.45, 0.3),
+        grill: std(0x15181e, 0.6, 0.5),
+        genset: std(0x2e5b4c, 0.5, 0.2),
+        panel: std(0xb5862f, 0.4, 0.4),
+        cabinet: std(0x5e3f2a, 0.45),
+      };
+
+      const SCR = {
+        blue: basic(0x6cc4f0),
+        amber: basic(0xf3b44a),
+        green: basic(0x5fd39a),
+        red: basic(0xf06a55),
+        ice: basic(0xcfe9f7),
+        dim: basic(0x1e3a5f),
+        navy: basic(0x15274a),
+      };
+
+      const PM = {
+        skin: std(0xd9a582, 0.7),
+        hair: std(0x1a1a1a, 0.8),
+        khaki: std(0xc39a55, 0.6),
+        beret: std(0x1e3a8a, 0.5),
+        brown: std(0x4a3728, 0.7),
+        blue: std(0x3b6ea8, 0.6),
+        white: std(0xf1f5f9, 0.5),
+        dark: std(0x1e293b, 0.8),
+        suit: std(0x111827, 0.5),
+        visitor: std(0x8c3a2a, 0.6),
+        headset: std(0x020617, 0.4, 0.7),
+        id: basic(0xb5361f),
+        cyber: std(0x2e5b4c, 0.6),
+      };
+
+      // ---------------------------------------------------------------------
+      //  Helpers
+      // ---------------------------------------------------------------------
+      function addBox(parent, w, h, d, mat, x, y, z) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        m.position.set(x, y, z);
+        parent.add(m);
+        return m;
+      }
+      function edgeFrame(w, l, y, t, h, mat) {
+        const g = new THREE.Group();
+        addBox(g, w + t, h, t, mat, 0, y, l / 2);
+        addBox(g, w + t, h, t, mat, 0, y, -l / 2);
+        addBox(g, t, h, l, mat, w / 2, y, 0);
+        addBox(g, t, h, l, mat, -w / 2, y, 0);
+        return g;
+      }
+      function addZone(parent, x, z, w, d, color, opacity = 0.25) {
+        const p = new THREE.Mesh(
+          new THREE.PlaneGeometry(w, d),
+          new THREE.MeshStandardMaterial({
+            color,
+            roughness: 0.9,
+            transparent: true,
+            opacity,
+          }),
+        );
+        p.rotation.x = -Math.PI / 2;
+        p.position.set(x, 0.006, z);
+        parent.add(p);
+        const e = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.PlaneGeometry(w, d)),
+          new THREE.LineBasicMaterial({
+            color: 0xeef3f5,
+            transparent: true,
+            opacity: 0.4,
+          }),
+        );
+        e.rotation.x = -Math.PI / 2;
+        e.position.set(x, 0.01, z);
+        parent.add(e);
+      }
+      function addGlass(parent, x1, z1, x2, z2, h = 2.25) {
+        const dx = x2 - x1,
+          dz = z2 - z1,
+          len = Math.hypot(dx, dz);
+        const g = new THREE.Group();
+        g.position.set((x1 + x2) / 2, 0, (z1 + z2) / 2);
+        g.rotation.y = Math.atan2(-dz, dx);
+        addBox(g, len, h, 0.04, MAT.partition, 0, h / 2, 0);
+        addBox(g, len, 0.04, 0.06, MAT.walnut, 0, h, 0);
+        addBox(g, len, 0.05, 0.06, MAT.walnut, 0, 0.025, 0);
+        parent.add(g);
+      }
+      function addPlant(parent, x, z, s = 1) {
+        const g = new THREE.Group();
+        g.position.set(x, 0, z);
+        g.scale.setScalar(s);
+        const pot = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.18, 0.14, 0.38, 14),
+          FM.pot,
+        );
+        pot.position.y = 0.19;
+        const f1 = new THREE.Mesh(
+          new THREE.SphereGeometry(0.32, 12, 10),
+          FM.leaf,
+        );
+        f1.position.y = 0.66;
+        const f2 = new THREE.Mesh(
+          new THREE.SphereGeometry(0.22, 10, 8),
+          FM.leaf2,
+        );
+        f2.position.set(0.12, 0.92, 0.05);
+        g.add(pot, f1, f2);
+        parent.add(g);
+      }
+      function videoWall(w, h, palette) {
+        const g = new THREE.Group();
+        addBox(g, w + 0.12, h + 0.12, 0.08, FM.bezel, 0, 0, -0.045);
+        const cols = Math.max(2, Math.round(w / 0.62)),
+          rows = Math.max(1, Math.round(h / 0.36));
+        const tw = w / cols,
+          th = h / rows,
+          geo = new THREE.PlaneGeometry(tw - 0.03, th - 0.03);
+        for (let r = 0; r < rows; r++)
+          for (let c = 0; c < cols; c++) {
+            const m = new THREE.Mesh(
+              geo,
+              palette[Math.floor(rnd() * palette.length)],
+            );
+            m.position.set(
+              -w / 2 + tw * (c + 0.5),
+              -h / 2 + th * (r + 0.5),
+              0.002,
+            );
+            g.add(m);
+          }
+        return g;
+      }
+      function signTexture(text, bg, fg, w = 1024, h = 160, size = 64) {
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        const g = c.getContext("2d");
+        g.fillStyle = bg;
+        g.fillRect(0, 0, w, h);
+        g.fillStyle = fg;
+        g.font = `700 ${size}px Archivo, Arial, sans-serif`;
+        g.textAlign = "center";
+        g.textBaseline = "middle";
+        g.fillText(text, w / 2, h / 2 + 4);
+        return new THREE.CanvasTexture(c);
+      }
+      function skyTexture() {
+        const c = document.createElement("canvas");
+        c.width = 4;
+        c.height = 512;
+        const g = c.getContext("2d");
+        const gr = g.createLinearGradient(0, 0, 0, 512);
+        gr.addColorStop(0, "#142a40");
+        gr.addColorStop(0.45, "#35536e");
+        gr.addColorStop(0.78, "#9fb1bf");
+        gr.addColorStop(1, "#d8c4b4");
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 4, 512);
+        return new THREE.CanvasTexture(c);
+      }
+
+      // ---------------------------------------------------------------------
+      //  People & furniture
+      // ---------------------------------------------------------------------
+      function person(o = {}) {
+        const f = new THREE.Group();
+        f.position.set(o.x || 0, 0, o.z || 0);
+        f.rotation.y = o.rotY || 0;
+        const sit = o.sit !== false,
+          role = o.role || "analyst";
+        let shirt = PM.blue,
+          pants = PM.dark,
+          beret = false;
+        if (role === "police") {
+          shirt = PM.khaki;
+          pants = PM.brown;
+          beret = true;
+        } else if (role === "exec") shirt = PM.suit;
+        else if (role === "visitor") shirt = PM.visitor;
+        else if (role === "call") shirt = PM.white;
+        else if (role === "cyber") shirt = PM.cyber;
+
+        const headTop = (y, r) => {
+          if (beret) {
+            const b = new THREE.Mesh(
+              new THREE.CylinderGeometry(r + 0.01, r, 0.05, 10),
+              PM.beret,
+            );
+            b.position.set(0.02, y + 0.08, -0.01);
+            b.rotation.z = -0.15;
+            f.add(b);
+          } else {
+            const h = new THREE.Mesh(
+              new THREE.SphereGeometry(
+                r + 0.004,
+                10,
+                8,
+                0,
+                Math.PI * 2,
+                0,
+                Math.PI / 2,
+              ),
+              PM.hair,
+            );
+            h.position.y = y;
+            f.add(h);
+          }
+        };
+        if (sit) {
+          const p = 0.34;
+          addBox(f, 0.26, 0.32, 0.16, shirt, 0, p + 0.16, 0);
+          if (role !== "visitor")
+            addBox(f, 0.06, 0.08, 0.01, PM.id, 0, p + 0.16, 0.085);
+          const head = new THREE.Mesh(
+            new THREE.SphereGeometry(0.09, 10, 10),
+            PM.skin,
+          );
+          head.position.y = p + 0.44;
+          f.add(head);
+          headTop(p + 0.44, 0.09);
+          if (o.headset) {
+            const band = new THREE.Mesh(
+              new THREE.TorusGeometry(0.095, 0.012, 4, 12, Math.PI),
+              PM.headset,
+            );
+            band.rotation.x = Math.PI / 2;
+            band.position.y = p + 0.45;
+            f.add(band);
+          }
+          [-0.15, 0.15].forEach((ax) => {
+            addBox(f, 0.06, 0.2, 0.06, shirt, ax, p + 0.2, 0.04).rotation.x =
+              0.35;
+            addBox(f, 0.05, 0.05, 0.18, PM.skin, ax, p + 0.12, 0.16);
+          });
+          [-0.07, 0.07].forEach((lx) => {
+            addBox(f, 0.08, 0.07, 0.24, pants, lx, p - 0.02, 0.1);
+            addBox(f, 0.07, 0.3, 0.07, pants, lx, 0.15, 0.2);
+            addBox(f, 0.08, 0.05, 0.12, PM.hair, lx, 0.025, 0.23);
+          });
+        } else {
+          const L = 0.65;
+          [-0.07, 0.07].forEach((lx) => {
+            addBox(f, 0.08, L, 0.08, pants, lx, L / 2, 0);
+            addBox(f, 0.09, 0.06, 0.14, PM.hair, lx, 0.03, 0.03);
+          });
+          addBox(f, 0.28, 0.38, 0.17, shirt, 0, L + 0.19, 0);
+          const head = new THREE.Mesh(
+            new THREE.SphereGeometry(0.095, 10, 10),
+            PM.skin,
+          );
+          head.position.y = L + 0.47;
+          f.add(head);
+          headTop(L + 0.47, 0.095);
+          [-0.17, 0.17].forEach((ax) =>
+            addBox(f, 0.06, 0.34, 0.06, shirt, ax, L + 0.16, 0),
+          );
+        }
+        return f;
+      }
+
+      function chair(x, z, rotY = 0, exec = false) {
+        const c = new THREE.Group();
+        c.position.set(x, 0, z);
+        c.rotation.y = rotY;
+        const m = exec ? FM.leather : FM.fabric;
+        const base = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.24, 0.24, 0.04, 10),
+          FM.chrome,
+        );
+        base.position.y = 0.06;
+        const stem = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.03, 0.03, 0.24, 8),
+          FM.chrome,
+        );
+        stem.position.y = 0.18;
+        c.add(base, stem);
+        const sw = exec ? 0.46 : 0.38,
+          sd = exec ? 0.44 : 0.36,
+          bh = exec ? 0.6 : 0.42;
+        addBox(c, sw, 0.07, sd, m, 0, 0.32, 0);
+        addBox(c, sw * 0.95, bh, 0.06, m, 0, 0.34 + bh / 2, -sd / 2 + 0.02);
+        return c;
+      }
+
+      // Monitors face +z; operator sits at +z facing -z.
+      function desk(x, z, rotY = 0, o = {}) {
+        const st = new THREE.Group();
+        st.position.set(x, 0, z);
+        st.rotation.y = rotY;
+        const w = o.w || 1.4,
+          d = o.d || 0.7,
+          h = 0.6,
+          top = o.exec ? FM.walnut : FM.deskTop;
+        addBox(st, w, 0.04, d, top, 0, h, 0);
+        [-w / 2 + 0.03, w / 2 - 0.03].forEach((lx) =>
+          addBox(st, 0.04, h - 0.02, d - 0.08, FM.chrome, lx, h / 2, 0),
+        );
+        addBox(st, w - 0.1, h * 0.5, 0.02, top, 0, h * 0.65, -d / 2 + 0.05);
+        if (o.divider) {
+          addBox(st, w, 0.44, 0.04, FM.divider, 0, h + 0.22, -d / 2 + 0.02);
+          [-w / 2, w / 2].forEach((sx) =>
+            addBox(
+              st,
+              0.04,
+              0.32,
+              d * 0.75,
+              FM.divider,
+              sx,
+              h + 0.16,
+              -d * 0.12,
+            ),
+          );
+        }
+        const n = o.screens || 2,
+          glow = o.glow || SCR.blue;
+        (n === 1 ? [0] : [-0.26, 0.26]).forEach((sx, k) => {
+          addBox(st, 0.02, 0.16, 0.02, FM.metal, sx, h + 0.09, -d * 0.2);
+          const bez = addBox(
+            st,
+            0.4,
+            0.25,
+            0.02,
+            FM.bezel,
+            sx,
+            h + 0.23,
+            -d * 0.2,
+          );
+          const face = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.37, 0.22),
+            glow,
+          );
+          face.position.set(sx, h + 0.23, -d * 0.2 + 0.012);
+          if (n > 1) {
+            bez.rotation.y = k === 0 ? 0.15 : -0.15;
+            face.rotation.y = bez.rotation.y;
+          }
+          st.add(face);
+        });
+        st.add(chair(0, 0.46, Math.PI, o.exec));
+        if (o.person !== false)
+          st.add(
+            person({
+              z: 0.4,
+              rotY: Math.PI,
+              role: o.role || (o.exec ? "exec" : "analyst"),
+              headset: o.headset,
+            }),
+          );
+        return st;
+      }
+      const pod = (x, z, glow) =>
+        desk(x, z, 0, {
+          w: 1.2,
+          d: 0.66,
+          screens: 1,
+          glow,
+          role: "call",
+          headset: true,
+          divider: true,
+        });
+
+      function conference(x, z, len = 3.6, wid = 1.6, seats = 8) {
+        const s = new THREE.Group();
+        s.position.set(x, 0, z);
+        addBox(s, len, 0.05, wid, FM.walnut, 0, 0.6, 0);
+        [-len / 3, len / 3].forEach((px) =>
+          addBox(s, 0.3, 0.6, wid * 0.4, FM.metal, px, 0.3, 0),
+        );
+        const per = Math.floor((seats - 2) / 2),
+          xs = (len - 0.8) / (per - 1 || 1);
+        for (let i = 0; i < per; i++) {
+          const cx = -len / 2 + 0.4 + i * xs;
+          s.add(
+            chair(cx, -wid / 2 - 0.34, 0, true),
+            chair(cx, wid / 2 + 0.34, Math.PI, true),
+          );
+          s.add(
+            i % 2
+              ? person({ x: cx, z: wid / 2 + 0.3, rotY: Math.PI })
+              : person({ x: cx, z: -wid / 2 - 0.3, role: "police" }),
+          );
+        }
+        s.add(
+          chair(-len / 2 - 0.36, 0, Math.PI / 2, true),
+          person({ x: -len / 2 - 0.32, rotY: Math.PI / 2, role: "police" }),
+        );
+        s.add(chair(len / 2 + 0.36, 0, -Math.PI / 2, true));
+        return s;
+      }
+
+      function ringConsole(x, z, glow) {
+        const g = new THREE.Group();
+        g.position.set(x, 0, z);
+        const a0 = Math.PI * 0.15,
+          al = Math.PI * 0.7;
+        const top = new THREE.Mesh(
+          new THREE.RingGeometry(1.0, 1.55, 40, 1, a0, al),
+          FM.walnut,
+        );
+        top.rotation.x = -Math.PI / 2;
+        top.position.y = 0.62;
+        g.add(top);
+        for (let k = 0; k < 5; k++) {
+          const a = a0 + (al * (k + 0.5)) / 5;
+          addBox(
+            g,
+            0.16,
+            0.6,
+            0.16,
+            FM.metal,
+            Math.cos(a) * 1.28,
+            0.3,
+            -Math.sin(a) * 1.28,
+          );
+          const mon = new THREE.Group();
+          mon.position.set(Math.cos(a) * 1.4, 0.88, -Math.sin(a) * 1.4);
+          mon.rotation.y = Math.atan2(-mon.position.x, -mon.position.z);
+          addBox(mon, 0.42, 0.26, 0.02, FM.bezel, 0, 0, 0);
+          const face = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.39, 0.23),
+            glow,
+          );
+          face.position.z = 0.012;
+          mon.add(face);
+          g.add(mon);
+        }
+        [0.38, 0.62].forEach((f) => {
+          const a = Math.PI * f,
+            px = Math.cos(a) * 0.62,
+            pz = -Math.sin(a) * 0.62,
+            ry = Math.atan2(Math.cos(a), -Math.sin(a));
+          g.add(
+            chair(px, pz, ry, true),
+            person({ x: px, z: pz, rotY: ry, role: "police", headset: true }),
+          );
+        });
+        return g;
+      }
+
+      function sofa(x, z, rotY = 0, len = 2) {
+        const g = new THREE.Group();
+        g.position.set(x, 0, z);
+        g.rotation.y = rotY;
+        addBox(g, len, 0.34, 0.8, FM.sofa, 0, 0.2, 0);
+        addBox(g, len, 0.48, 0.18, FM.sofa, 0, 0.5, -0.31);
+        [-1, 1].forEach((s) =>
+          addBox(g, 0.16, 0.5, 0.8, FM.sofa, s * (len / 2 - 0.08), 0.28, 0),
+        );
+        addBox(g, len - 0.36, 0.1, 0.6, FM.cushion, 0, 0.42, 0.06);
+        return g;
+      }
+
+      function roundTable(x, z, n = 4) {
+        const g = new THREE.Group();
+        g.position.set(x, 0, z);
+        const t = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.6, 0.6, 0.05, 28),
+          FM.walnut,
+        );
+        t.position.y = 0.6;
+        const s = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.07, 0.2, 0.58, 10),
+          FM.metal,
+        );
+        s.position.y = 0.29;
+        g.add(t, s);
+        for (let k = 0; k < n; k++) {
+          const a = (k * Math.PI * 2) / n + 0.4,
+            px = Math.sin(a) * 0.95,
+            pz = Math.cos(a) * 0.95,
+            ry = a + Math.PI;
+          g.add(chair(px, pz, ry));
+          if (k % 2 === 0)
+            g.add(
+              person({
+                x: px * 0.95,
+                z: pz * 0.95,
+                rotY: ry,
+                role: k ? "cyber" : "police",
+              }),
+            );
+        }
+        return g;
+      }
+
+      function checkpoint(x, z) {
+        const cp = new THREE.Group();
+        cp.position.set(x, 0, z);
+        addBox(cp, 0.12, 1.9, 0.4, FM.metal, -0.47, 0.95, 0);
+        addBox(cp, 0.12, 1.9, 0.4, FM.metal, 0.47, 0.95, 0);
+        addBox(cp, 1.07, 0.22, 0.4, MAT.walnut, 0, 2.01, 0);
+        addBox(cp, 1.6, 0.9, 0.95, FM.deskTop, 1.5, 0.55, 0);
+        addBox(cp, 2.4, 0.1, 0.7, FM.metal, 1.5, 0.5, 0);
+        cp.add(
+          person({
+            x: -1.15,
+            z: 0.1,
+            rotY: Math.PI / 3,
+            sit: false,
+            role: "police",
+          }),
+        );
+        cp.add(person({ x: 1.4, z: -0.6, role: "police" }));
+        return cp;
+      }
+
+      function rack(x, z, rotY = 0) {
+        const r = new THREE.Group();
+        r.position.set(x, 0, z);
+        r.rotation.y = rotY;
+        addBox(r, 0.8, 2.1, 0.9, FM.rack, 0, 1.05, 0);
+        const door = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.72, 1.95),
+          FM.rackGlass,
+        );
+        door.position.set(0, 1.05, 0.46);
+        r.add(door);
+        for (let s = 0; s < 7; s++)
+          addBox(
+            r,
+            0.64,
+            0.03,
+            0.02,
+            s % 2 ? SCR.green : SCR.blue,
+            0,
+            0.35 + s * 0.24,
+            0.44,
+          );
+        return r;
+      }
+
+      function patrolCar(x, z, rotY = 0) {
+        const car = new THREE.Group();
+        car.position.set(x, 0, z);
+        car.rotation.y = rotY;
+        addBox(car, 1.8, 0.55, 3.6, std(0xf4f5f7, 0.25, 0.3), 0, 0.45, 0);
+        addBox(car, 1.5, 0.5, 2.0, std(0x0f172a, 0.1, 0.5), 0, 0.9, -0.15);
+        addBox(car, 1.82, 0.08, 3.62, std(0x1d4ed8, 0.4), 0, 0.5, 0);
+        addBox(car, 0.4, 0.08, 0.15, SCR.red, -0.25, 1.18, -0.15);
+        addBox(car, 0.4, 0.08, 0.15, SCR.blue, 0.25, 1.18, -0.15);
+        [
+          [-0.9, 1],
+          [0.9, 1],
+          [-0.9, -1],
+          [0.9, -1],
+        ].forEach(([wx, wz]) => {
+          const w = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.26, 0.26, 0.2, 14),
+            FM.metal,
+          );
+          w.rotation.z = Math.PI / 2;
+          w.position.set(wx, 0.26, wz);
+          car.add(w);
+        });
+        return car;
+      }
+
+      function containment(parent, x, z, w, d) {
+        const box = addBox(parent, w, 2.3, d, MAT.partition, x, 1.15, z);
+        box.renderOrder = 2;
+        const e = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(w, 2.3, d)),
+          new THREE.LineBasicMaterial({
+            color: 0x9fd3f0,
+            transparent: true,
+            opacity: 0.7,
+          }),
+        );
+        e.position.set(x, 1.15, z);
+        parent.add(e);
+      }
+
+      // ---------------------------------------------------------------------
+      //  Scene
+      // ---------------------------------------------------------------------
+      function init() {
+        const box = document.getElementById("scene");
+        scene = new THREE.Scene();
+        scene.background = skyTexture();
+        scene.fog = new THREE.FogExp2(0xa6b6c3, 0.0048);
+
+        camera = new THREE.PerspectiveCamera(
+          42,
+          box.clientWidth / box.clientHeight,
+          0.1,
+          1200,
+        );
+        camera.position.set(30, 22, 34);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(box.clientWidth, box.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        box.appendChild(renderer.domElement);
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.maxPolarAngle = Math.PI / 2 - 0.03;
+        controls.minDistance = 6;
+        controls.maxDistance = 160;
+
+        buildLights();
+        buildLandscape();
+        buildSite();
+        for (let i = 0; i < BUILT; i++) buildFloor(i);
+        buildTerrace();
+        buildSection();
+
+        window.addEventListener("resize", onResize);
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            nextFloor();
+          }
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            prevFloor();
+          }
+        });
+        setStage(0);
+        animate();
+      }
+
+      function buildLights() {
+        scene.add(new THREE.HemisphereLight(0xcfe0ee, 0x3a3026, 0.75));
+        const sun = new THREE.DirectionalLight(0xffdcb4, 1.45);
+        sun.position.set(-42, 48, 30);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(2048, 2048);
+        Object.assign(sun.shadow.camera, {
+          left: -36,
+          right: 36,
+          top: 36,
+          bottom: -36,
+          near: 1,
+          far: 170,
+        });
+        sun.shadow.bias = -0.0004;
+        scene.add(sun);
+        const fill = new THREE.DirectionalLight(0x9fc0e0, 0.45);
+        fill.position.set(40, 25, -30);
+        scene.add(fill);
+      }
+
+      function buildLandscape() {
+        // Snow-capped ranges on the horizon
+        for (let k = 0; k < 30; k++) {
+          const a = (k / 30) * Math.PI * 2 + rnd() * 0.15;
+          const r = 115 + rnd() * 45,
+            h = 20 + rnd() * 30,
+            br = 16 + rnd() * 16;
+          const seg = 5 + Math.floor(rnd() * 3);
+          const m = new THREE.Mesh(
+            new THREE.ConeGeometry(br, h, seg),
+            MAT.mountain,
+          );
+          m.position.set(Math.cos(a) * r, h / 2 - 1, Math.sin(a) * r);
+          m.rotation.y = rnd() * Math.PI;
+          const capH = h * 0.36;
+          const cap = new THREE.Mesh(
+            new THREE.ConeGeometry(br * 0.36 + 0.2, capH, seg),
+            MAT.snowcap,
+          );
+          cap.position.set(m.position.x, h - 1 - capH / 2 + 0.05, m.position.z);
+          cap.rotation.y = m.rotation.y;
+          scene.add(m, cap);
+        }
+
+        // Meadow with the basement pit cut out
+        const hx = SLAB_W / 2 + 0.8,
+          hz = SLAB_L / 2 + 0.8;
+        const hole = () => {
+          const p = new THREE.Path();
+          p.moveTo(-hx, -hz);
+          p.lineTo(hx, -hz);
+          p.lineTo(hx, hz);
+          p.lineTo(-hx, hz);
+          p.lineTo(-hx, -hz);
+          return p;
+        };
+        const meadow = new THREE.Shape();
+        meadow.absarc(0, 0, 220, 0, Math.PI * 2, false);
+        meadow.holes.push(hole());
+        const mg = new THREE.Mesh(
+          new THREE.ShapeGeometry(meadow, 64),
+          MAT.meadow,
+        );
+        mg.rotation.x = -Math.PI / 2;
+        mg.receiveShadow = true;
+        scene.add(mg);
+
+        const gx = 22,
+          gz = 17;
+        const gravel = new THREE.Shape();
+        gravel.moveTo(-gx, -gz);
+        gravel.lineTo(gx, -gz);
+        gravel.lineTo(gx, gz);
+        gravel.lineTo(-gx, gz);
+        gravel.lineTo(-gx, -gz);
+        gravel.holes.push(hole());
+        const gg = new THREE.Mesh(new THREE.ShapeGeometry(gravel), MAT.gravel);
+        gg.rotation.x = -Math.PI / 2;
+        gg.position.y = 0.012;
+        gg.receiveShadow = true;
+        scene.add(gg);
+
+        // Pit
+        const pd = 3.1;
+        addBox(scene, hx * 2 + 0.8, pd, 0.4, MAT.pit, 0, -pd / 2, hz + 0.2);
+        addBox(scene, hx * 2 + 0.8, pd, 0.4, MAT.pit, 0, -pd / 2, -hz - 0.2);
+        addBox(scene, 0.4, pd, hz * 2, MAT.pit, hx + 0.2, -pd / 2, 0);
+        addBox(scene, 0.4, pd, hz * 2, MAT.pit, -hx - 0.2, -pd / 2, 0);
+        addBox(scene, hx * 2, 0.2, hz * 2, MAT.pit, 0, -pd, 0).receiveShadow =
+          true;
+        scene.add(
+          edgeFrame(hx * 2 + 0.4, hz * 2 + 0.4, 0.05, 0.14, 0.1, MAT.slabEdge),
+        );
+
+        // Approach road
+        addBox(
+          scene,
+          7.2,
+          0.04,
+          40,
+          MAT.asphalt,
+          0,
+          0.03,
+          gz + 20,
+        ).receiveShadow = true;
+
+        // Chinar trees outside the site fence
+        const spots = [
+          [-27, 10],
+          [-31, 2],
+          [-28, -8],
+          [-25, 22],
+          [-12, 24],
+          [12, 24],
+          [25, 22],
+          [28, 9],
+          [31, -1],
+          [27, -12],
+          [-20, -24],
+          [-6, -25],
+          [8, -24],
+          [22, -23],
+          [-36, 16],
+          [36, 16],
+          [-40, -6],
+          [40, -10],
+          [-18, -13],
+          [18, -13],
+          [-18.5, 12.5],
+          [18.5, 12.5],
+        ];
+        const cmats = [MAT.chinar1, MAT.chinar2, MAT.chinar3];
+        spots.forEach(([x, z], k) => {
+          const t = new THREE.Group();
+          t.position.set(x, 0, z);
+          const s = 0.9 + rnd() * 0.6;
+          t.scale.setScalar(s);
+          const trunk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.18, 0.28, 2.2, 8),
+            MAT.trunk,
+          );
+          trunk.position.y = 1.1;
+          const c1 = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(1.9, 1),
+            cmats[k % 3],
+          );
+          c1.position.y = 3.2;
+          c1.scale.set(1.15, 0.9, 1.15);
+          const c2 = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(1.2, 1),
+            cmats[(k + 1) % 3],
+          );
+          c2.position.set(0.9, 3.9, 0.4);
+          const c3 = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(1.1, 1),
+            cmats[(k + 2) % 3],
+          );
+          c3.position.set(-0.8, 3.6, -0.5);
+          [trunk, c1, c2, c3].forEach((m) => {
+            m.castShadow = true;
+            t.add(m);
+          });
+          scene.add(t);
+        });
+      }
+
+      function monumentTexture() {
+        const c = document.createElement("canvas");
+        c.width = 1024;
+        c.height = 320;
+        const g = c.getContext("2d");
+        g.fillStyle = "#26323d";
+        g.fillRect(0, 0, 1024, 320);
+        g.fillStyle = "#B5361F";
+        g.fillRect(64, 72, 10, 176);
+        g.fillStyle = "#EEF3F5";
+        g.textAlign = "left";
+        g.textBaseline = "alphabetic";
+        g.font = "700 92px Archivo, Arial, sans-serif";
+        g.fillText("S4C Headquarters", 104, 160);
+        g.fillStyle = "#C9D5DC";
+        g.font = "500 54px Archivo, Arial, sans-serif";
+        g.fillText("Jammu & Kashmir Police", 106, 238);
+        return new THREE.CanvasTexture(c);
+      }
+
+      function lamp(parent, x, z, h = 3.2) {
+        const pole = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.05, 0.07, h, 8),
+          std(0x2b3036, 0.4, 0.7),
+        );
+        pole.position.set(x, h / 2, z);
+        pole.castShadow = true;
+        parent.add(pole);
+        addBox(parent, 0.5, 0.08, 0.22, std(0x2b3036, 0.4, 0.7), x, h, z);
+        addBox(parent, 0.42, 0.02, 0.16, basic(0xffe2b0), x, h - 0.05, z);
+      }
+
+      function buildSite() {
+        const gx = 22,
+          gz = 17;
+        const hx = SLAB_W / 2 + 0.8,
+          hz = SLAB_L / 2 + 0.8;
+        const stoneDark = std(0x8a8378, 0.7);
+        const site = new THREE.Group();
+
+        // Plaza border band
+        site.add(edgeFrame(gx * 2, gz * 2, 0.03, 0.7, 0.04, stoneDark));
+
+        // Entrance bridge over the light-well and glass balustrade around it
+        addBox(
+          site,
+          7.2,
+          0.3,
+          hz - SLAB_L / 2 + 0.2,
+          MAT.slabEdge,
+          0,
+          -0.12,
+          (SLAB_L / 2 + hz) / 2,
+        );
+        const b = hx + 0.12,
+          c = hz + 0.12;
+        addGlass(site, -b, c, -3.6, c, 1.05);
+        addGlass(site, 3.6, c, b, c, 1.05);
+        addGlass(site, -b, -c, b, -c, 1.05);
+        addGlass(site, -b, -c, -b, c, 1.05);
+        addGlass(site, b, -c, b, c, 1.05);
+
+        // Low boundary wall with a gated entrance
+        const wall = (x1, z1, x2, z2) => {
+          const len = Math.hypot(x2 - x1, z2 - z1),
+            g = new THREE.Group();
+          g.position.set((x1 + x2) / 2, 0, (z1 + z2) / 2);
+          g.rotation.y = Math.atan2(-(z2 - z1), x2 - x1);
+          addBox(g, len, 0.7, 0.4, MAT.parapet, 0, 0.35, 0).castShadow = true;
+          addBox(g, len + 0.04, 0.06, 0.48, MAT.walnut, 0, 0.73, 0);
+          site.add(g);
+        };
+        wall(-gx, -gz, gx, -gz);
+        wall(-gx, -gz, -gx, gz);
+        wall(gx, -gz, gx, gz);
+        wall(-gx, gz, -4.6, gz);
+        wall(4.6, gz, gx, gz);
+        [-4.6, 4.6].forEach((x) => {
+          addBox(site, 0.9, 2.3, 0.9, MAT.parapet, x, 1.15, gz).castShadow =
+            true;
+          addBox(site, 1.0, 0.1, 1.0, MAT.walnut, x, 2.35, gz);
+          addBox(site, 0.3, 0.3, 0.3, basic(0xffe2b0), x, 2.55, gz);
+        });
+
+        // Monument sign at the gate
+        const mon = new THREE.Group();
+        mon.position.set(-10.5, 0, gz + 2.2);
+        addBox(mon, 6.4, 0.3, 1.4, stoneDark, 0, 0.15, 0);
+        addBox(mon, 5.6, 1.75, 0.5, std(0x26323d, 0.5), 0, 1.17, 0).castShadow =
+          true;
+        const face = new THREE.Mesh(
+          new THREE.PlaneGeometry(5.6, 1.75),
+          new THREE.MeshBasicMaterial({ map: monumentTexture() }),
+        );
+        face.position.set(0, 1.17, 0.252);
+        mon.add(face);
+        site.add(mon);
+
+        // Reflecting pools and benches
+        [-15.5, 15.5].forEach((x) => {
+          addBox(site, 6.0, 0.3, 10.0, MAT.parapet, x, 0.15, 0).receiveShadow =
+            true;
+          addBox(site, 5.4, 0.32, 9.4, MAT.water, x, 0.16, 0);
+          [-3.6, 3.6].forEach((z) => {
+            addBox(
+              site,
+              0.5,
+              0.42,
+              1.8,
+              MAT.walnut,
+              x + Math.sign(x) * -3.8,
+              0.21,
+              z,
+            ).castShadow = true;
+          });
+        });
+
+        // Hedged planters along the building
+        const hedge = std(0x2f4f36, 0.9);
+        const planter = (x, z, w, d) => {
+          addBox(site, w, 0.5, d, MAT.parapet, x, 0.25, z);
+          addBox(site, w - 0.2, 0.45, d - 0.2, hedge, x, 0.65, z).castShadow =
+            true;
+        };
+        planter(-6.5, -hz - 1.4, 6, 0.9);
+        planter(6.5, -hz - 1.4, 6, 0.9);
+        planter(-7.6, hz + 1.4, 4, 0.9);
+        planter(7.6, hz + 1.4, 4, 0.9);
+        planter(-hx - 1.4, 0, 0.9, 8);
+        planter(hx + 1.4, 0, 0.9, 8);
+
+        // Lighting along the approach and plaza
+        for (let z = gz + 4; z < gz + 38; z += 6) {
+          lamp(site, -4.4, z);
+          lamp(site, 4.4, z);
+        }
+        [
+          [-12, 13],
+          [12, 13],
+          [-12, -13],
+          [12, -13],
+          [-20, 0],
+          [20, 0],
+        ].forEach(([x, z]) => lamp(site, x, z));
+
+        scene.add(site);
+      }
+
+      // ---------------------------------------------------------------------
+      function buildFloor(i) {
+        const g = new THREE.Group();
+        g.position.y = levelY(i);
+        g.userData = { index: i, shown: false };
+
+        const slab = addBox(g, SLAB_W, 0.28, SLAB_L, MAT.slab, 0, 0, 0);
+        slab.castShadow = slab.receiveShadow = true;
+        g.add(edgeFrame(SLAB_W, SLAB_L, 0, 0.08, 0.3, MAT.slabEdge));
+        const fin = new THREE.Mesh(
+          new THREE.PlaneGeometry(SLAB_W - 0.2, SLAB_L - 0.2),
+          i <= 1 ? MAT.floorConcrete : MAT.floorStone,
+        );
+        fin.rotation.x = -Math.PI / 2;
+        fin.position.y = 0.142;
+        fin.receiveShadow = true;
+        g.add(fin);
+
+        g.userData.ceiling = addBox(
+          g,
+          SLAB_W,
+          0.16,
+          SLAB_L,
+          MAT.ceiling,
+          0,
+          FLOOR_H,
+          0,
+        );
+        addBox(
+          g,
+          3.0,
+          FLOOR_H,
+          3.2,
+          MAT.core,
+          -7.2,
+          FLOOR_H / 2 + 0.14,
+          0,
+        ).castShadow = true;
+        [-0.6, 0.6].forEach((dz) => {
+          const door = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.7, 1.7),
+            MAT.bronze,
+          );
+          door.rotation.y = Math.PI / 2;
+          door.position.set(-5.69, 0.99, dz);
+          g.add(door);
+        });
+        [
+          [-8.4, -5.9],
+          [8.4, -5.9],
+          [-8.4, 5.9],
+          [8.4, 5.9],
+          [0, -5.9],
+          [0, 5.9],
+        ].forEach(([cx, cz]) => {
+          const c = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.17, 0.17, FLOOR_H, 16),
+            MAT.column,
+          );
+          c.position.set(cx, FLOOR_H / 2 + 0.14, cz);
+          c.castShadow = true;
+          g.add(c);
+        });
+
+        g.userData.fins = [];
+        if (i > 0) {
+          const glass = addBox(
+            g,
+            SLAB_W - 0.12,
+            FLOOR_H - 0.12,
+            SLAB_L - 0.12,
+            MAT.glass,
+            0,
+            FLOOR_H / 2 + 0.1,
+            0,
+          );
+          glass.renderOrder = 2;
+          g.userData.glass = glass;
+          const fh = FLOOR_H + GAP;
+          const fb = new THREE.InstancedMesh(
+            new THREE.BoxGeometry(0.1, fh, 0.36),
+            MAT.walnut,
+            30,
+          );
+          const fs = new THREE.InstancedMesh(
+            new THREE.BoxGeometry(0.36, fh, 0.1),
+            MAT.walnut,
+            20,
+          );
+          const m4 = new THREE.Matrix4();
+          let k = 0;
+          for (let x = -8.4; x <= 8.41; x += 1.2) {
+            m4.makeTranslation(x, fh / 2 + 0.04, SLAB_L / 2 + 0.22);
+            fb.setMatrixAt(k++, m4);
+            m4.makeTranslation(x, fh / 2 + 0.04, -SLAB_L / 2 - 0.22);
+            fb.setMatrixAt(k++, m4);
+          }
+          k = 0;
+          for (let z = -5.4; z <= 5.41; z += 1.2) {
+            m4.makeTranslation(SLAB_W / 2 + 0.22, fh / 2 + 0.04, z);
+            fs.setMatrixAt(k++, m4);
+            m4.makeTranslation(-SLAB_W / 2 - 0.22, fh / 2 + 0.04, z);
+            fs.setMatrixAt(k++, m4);
+          }
+          fb.castShadow = fs.castShadow = true;
+          g.add(fb, fs);
+          g.userData.fins.push(fb, fs);
+          g.userData.glow = addBox(
+            g,
+            SLAB_W - 0.6,
+            FLOOR_H - 0.4,
+            SLAB_L - 0.6,
+            new THREE.MeshBasicMaterial({
+              color: 0xffd9a8,
+              transparent: true,
+              opacity: 0.1,
+              depthWrite: false,
+            }),
+            0,
+            FLOOR_H / 2 + 0.12,
+            0,
+          );
+        }
+        if (i === 1) buildCanopy(g);
+
+        const interior = new THREE.Group();
+        interior.position.y = 0.145;
+        buildInterior(interior, i);
+        g.add(interior);
+        g.userData.interior = interior;
+
+        scene.add(g);
+        floors.push(g);
+      }
+
+      function buildCanopy(g) {
+        const zc = SLAB_L / 2 + 1.5;
+        addBox(
+          g,
+          7.2,
+          0.16,
+          3.0,
+          MAT.ceiling,
+          0,
+          FLOOR_H - 0.1,
+          zc,
+        ).castShadow = true;
+        addBox(g, 7.3, 0.4, 0.1, MAT.walnut, 0, FLOOR_H - 0.1, zc + 1.52);
+        const sign = new THREE.Mesh(
+          new THREE.PlaneGeometry(6.6, 0.32),
+          new THREE.MeshBasicMaterial({
+            map: signTexture(
+              "S4C HEADQUARTERS  —  J&K POLICE",
+              "#6B4A33",
+              "#EEF3F5",
+              1024,
+              64,
+              40,
+            ),
+          }),
+        );
+        sign.position.set(0, FLOOR_H - 0.1, zc + 1.575);
+        g.add(sign);
+        [-3.3, 3.3].forEach((x) => {
+          const p = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.1, 0.1, FLOOR_H - 0.2, 12),
+            MAT.slabEdge,
+          );
+          p.position.set(x, (FLOOR_H - 0.2) / 2 + 0.05, zc + 1.2);
+          g.add(p);
+        });
+      }
+
+      function buildInterior(g, level) {
+        if (level === 0) {
+          // Basement — unchanged programme
+          addZone(g, -3.0, 3.2, 5.6, 5.4, 0x475569);
+          addZone(g, 4.4, -2.2, 5.4, 6.4, 0x2e5b4c);
+          addZone(g, -3.3, -4.2, 4.4, 3.2, 0xb5862f);
+          g.add(patrolCar(-4.25, 3.2), patrolCar(-1.65, 3.2));
+          [-5.55, -2.95, -0.35].forEach((p) =>
+            addBox(g, 0.1, 0.01, 4.2, SCR.amber, p, 0.01, 3.2),
+          );
+          const gen = new THREE.Group();
+          gen.position.set(4.5, 0, -3.2);
+          addBox(gen, 3.2, 1.6, 2.0, FM.genset, 0, 0.8, 0);
+          addBox(gen, 0.1, 1.2, 1.6, FM.grill, -1.6, 0.8, 0);
+          const ex = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.12, 0.12, 1.4, 10),
+            FM.chrome,
+          );
+          ex.position.set(1.2, 1.9, -0.5);
+          gen.add(ex);
+          g.add(gen);
+          for (let e = 0; e < 3; e++) {
+            addBox(g, 0.9, 1.8, 0.65, FM.panel, -4.5 + e * 1.2, 0.9, -3.5);
+            addBox(g, 0.6, 0.06, 0.04, SCR.red, -4.5 + e * 1.2, 1.45, -3.15);
+          }
+          g.add(person({ x: -2.5, z: -2.6, rotY: -Math.PI / 4, sit: false }));
+          for (let u = 0; u < 2; u++)
+            addBox(g, 1.6, 1.4, 0.7, FM.deskTop, 4.2, 0.7, 1.5 + u * 1.4);
+        } else if (level === 1) {
+          // Ground — unchanged programme
+          addZone(g, -3.6, 3.0, 4.6, 5.6, 0x1f3a52);
+          addZone(g, -3.0, -3.8, 5.0, 3.6, 0xb5862f);
+          addZone(g, 4.6, 0.6, 8.0, 10.6, 0xb5361f, 0.1);
+          g.add(patrolCar(-4.3, 3.0));
+          g.add(
+            desk(-4.0, -3.6, 0, { w: 1.5, glow: SCR.amber, role: "police" }),
+          );
+          g.add(desk(-2.0, -3.6, 0, { w: 1.5, role: "police" }));
+          g.add(checkpoint(3.2, 3.0));
+          addBox(g, 3.4, 0.9, 0.8, FM.counter, 4.0, 0.45, -1.8);
+          addBox(g, 3.42, 0.05, 0.82, MAT.walnut, 4.0, 0.7, -1.8);
+          g.add(chair(4.0, -2.4), person({ x: 4.0, z: -2.4, role: "police" }));
+          [3.2, 4.8].forEach((x) =>
+            g.add(
+              chair(x, -1.0, Math.PI),
+              person({ x, z: -1.0, rotY: Math.PI, role: "visitor" }),
+            ),
+          );
+          g.add(desk(7.2, -4.0, 0, { screens: 1, role: "police" }));
+          g.add(sofa(7.6, 0.6, -Math.PI / 2, 2.2));
+          addPlant(g, 8.2, 5.6, 1.1);
+          addPlant(g, 1.0, -5.6);
+          addPlant(g, 8.2, -2.2, 0.9);
+        } else if (level === 2) {
+          // 1F — Integrated call centre + OCWC wing
+          addZone(g, -0.6, -1.4, 9.6, 9.0, 0x1f3a52, 0.22);
+          addZone(g, 6.55, 0, 4.3, 11.8, 0xb5361f, 0.16);
+          const vw = videoWall(8.6, 1.4, [
+            SCR.blue,
+            SCR.dim,
+            SCR.navy,
+            SCR.ice,
+            SCR.amber,
+            SCR.dim,
+          ]);
+          vw.position.set(-0.5, 1.3, -5.92);
+          g.add(vw);
+          [-4.4, -3.0, -1.6, 0.6, 2.0, 3.4].forEach((x) => {
+            g.add(pod(x, -4.0, SCR.blue));
+            g.add(pod(x, -2.3, SCR.blue));
+          });
+          [-4.4, -3.0].forEach((x) => {
+            g.add(pod(x, 1.6, SCR.ice));
+            g.add(pod(x, 3.3, SCR.ice));
+          });
+          g.add(ringConsole(0.2, 1.8, SCR.amber));
+          addGlass(g, 4.4, -5.9, 4.4, -0.7);
+          addGlass(g, 4.4, 0.7, 4.4, 5.9);
+          [5.6, 7.6].forEach((x) => {
+            g.add(desk(x, -4.2, 0, { glow: SCR.green, role: "cyber" }));
+            g.add(desk(x, -2.5, 0, { glow: SCR.blue, role: "police" }));
+          });
+          g.add(roundTable(6.6, 2.4));
+          g.add(sofa(6.6, 5.2, Math.PI, 2.2));
+          addPlant(g, 8.3, 0.4, 0.9);
+          addPlant(g, 3.8, 5.6, 0.9);
+        } else if (level === 3) {
+          // 2F — Cyber investigation wing
+          addZone(g, -1.2, -3.4, 8.8, 4.8, 0xb5361f, 0.16);
+          addZone(g, 6.2, -3.4, 4.8, 4.8, 0x1f3a52, 0.22);
+          addZone(g, -3.1, 3.4, 5.0, 4.8, 0xb5862f, 0.18);
+          addZone(g, 4.1, 3.4, 9.0, 4.8, 0x2e5b4c, 0.18);
+          const cw = videoWall(6.0, 1.2, [
+            SCR.red,
+            SCR.navy,
+            SCR.blue,
+            SCR.dim,
+            SCR.amber,
+          ]);
+          cw.position.set(-1.2, 1.4, -5.92);
+          g.add(cw);
+          [-4.2, -2.2, -0.2, 1.8].forEach((x) => {
+            g.add(
+              desk(x, -4.2, 0, {
+                glow: SCR.green,
+                role: "cyber",
+                divider: true,
+              }),
+            );
+            g.add(
+              desk(x, -2.5, 0, {
+                glow: SCR.blue,
+                role: "police",
+                divider: true,
+              }),
+            );
+          });
+          addGlass(g, 3.7, -5.9, 3.7, -0.9);
+          addGlass(g, 3.7, -0.9, 8.7, -0.9);
+          g.add(rack(8.2, -5.0, -Math.PI / 2), rack(8.2, -4.0, -Math.PI / 2));
+          const fl = desk(5.1, -4.3, 0, { glow: SCR.ice, role: "analyst" });
+          const scope = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.06, 0.08, 0.32, 10),
+            FM.chrome,
+          );
+          scope.position.set(0.5, 0.78, 0.05);
+          fl.add(scope);
+          g.add(
+            fl,
+            desk(5.1, -2.6, 0, { glow: SCR.green, role: "cyber" }),
+            desk(6.9, -2.6, 0, { glow: SCR.blue, role: "police" }),
+          );
+          addGlass(g, -5.6, 0.9, -0.6, 0.9);
+          addGlass(g, -0.6, 0.9, -0.6, 5.9);
+          g.add(conference(-3.1, 3.4, 3.2, 1.4, 8));
+          [1.0, 3.0, 5.0].forEach((x) => {
+            g.add(desk(x, 2.2, 0, { glow: SCR.amber, role: "cyber" }));
+            g.add(desk(x, 4.0, 0, { glow: SCR.blue, role: "analyst" }));
+          });
+          g.add(sofa(7.6, 4.0, -Math.PI / 2, 2.0));
+          addPlant(g, 8.3, 1.4, 0.9);
+          addPlant(g, 8.3, 5.7, 0.9);
+        } else if (level === 4) {
+          // 3F — DC/DR + Cyber threat division
+          addZone(g, -3.0, -4.1, 5.2, 3.6, 0x1f3a52, 0.3);
+          addZone(g, 2.9, -4.1, 5.0, 3.6, 0x2e5b4c, 0.3);
+          addZone(g, 1.55, 2.4, 14.2, 7.6, 0xb5361f, 0.14);
+          [-4.8, -3.95, -3.1, -2.25, -1.4].forEach((x) => {
+            g.add(rack(x, -5.0, 0));
+            g.add(rack(x, -3.2, Math.PI));
+          });
+          containment(g, -3.1, -4.1, 4.5, 2.8);
+          [1.6, 2.45, 3.3, 4.15].forEach((x) => {
+            g.add(rack(x, -5.0, 0));
+            g.add(rack(x, -3.2, Math.PI));
+          });
+          containment(g, 2.875, -4.1, 3.7, 2.8);
+          addGlass(g, 0.15, -5.9, 0.15, -2.0);
+          [5.6, 6.6, 7.6].forEach((x) => {
+            addBox(g, 0.8, 1.9, 0.8, FM.appliance, x, 0.95, -5.2);
+            addBox(g, 0.6, 1.2, 0.02, FM.grill, x, 1.1, -4.79);
+          });
+          g.add(person({ x: -3.1, z: -4.1, rotY: Math.PI / 2, sit: false }));
+          g.add(
+            person({
+              x: 2.9,
+              z: -4.1,
+              rotY: -Math.PI / 2,
+              sit: false,
+              role: "cyber",
+            }),
+          );
+          addGlass(g, -5.6, -1.9, 8.7, -1.9);
+          const tw = videoWall(9.0, 1.2, [
+            SCR.red,
+            SCR.navy,
+            SCR.amber,
+            SCR.dim,
+            SCR.blue,
+          ]);
+          tw.position.set(1.4, 1.35, -1.84);
+          g.add(tw);
+          [0.4, 2.2, 4.0].forEach((z, row) => {
+            [-4.0, -1.8, 0.4, 2.6, 4.8, 7.0].forEach((x, k) => {
+              g.add(
+                desk(x, z, 0, {
+                  w: 1.6,
+                  glow: (k + row) % 3 ? SCR.blue : SCR.red,
+                  role: (k + row) % 2 ? "cyber" : "police",
+                  headset: row === 0,
+                }),
+              );
+            });
+          });
+        } else if (level === 5) {
+          // 4F — Admin wing with training hall
+          addZone(g, 3.6, -3.4, 10.2, 4.8, 0x2e5b4c, 0.18);
+          addZone(g, -3.0, -3.4, 5.0, 4.8, 0x1f3a52, 0.18);
+          addZone(g, -1.0, 3.25, 9.2, 5.3, 0xb5361f, 0.16);
+          addZone(g, 6.55, 3.4, 4.3, 5.0, 0xb5862f, 0.16);
+          [1.4, 3.2, 5.0, 6.8].forEach((x) => {
+            g.add(
+              desk(x, -4.2, 0, {
+                screens: 1,
+                glow: SCR.green,
+                role: "analyst",
+              }),
+            );
+            g.add(
+              desk(x, -2.4, 0, { screens: 1, glow: SCR.blue, role: "police" }),
+            );
+          });
+          [-4.4, -2.8, -1.2].forEach((x) => {
+            addBox(g, 1.4, 1.7, 0.5, FM.cabinet, x, 0.85, -5.7);
+          });
+          g.add(
+            desk(-4.0, -3.4, 0, {
+              screens: 1,
+              glow: SCR.amber,
+              role: "police",
+            }),
+          );
+          g.add(
+            desk(-2.0, -3.4, 0, {
+              screens: 1,
+              glow: SCR.blue,
+              role: "analyst",
+            }),
+          );
+          addGlass(g, -5.6, 0.6, 3.6, 0.6);
+          addGlass(g, 3.6, 0.6, 3.6, 5.9);
+          const pw = videoWall(4.0, 1.1, [SCR.blue, SCR.navy, SCR.ice]);
+          pw.position.set(-1.0, 1.4, 0.68);
+          g.add(pw);
+          addBox(g, 0.7, 1.0, 0.5, FM.walnut, 2.4, 0.5, 1.2).castShadow = true;
+          g.add(
+            person({
+              x: 2.4,
+              z: 1.55,
+              rotY: Math.PI,
+              sit: false,
+              role: "police",
+            }),
+          );
+          [2.2, 3.6, 5.0].forEach((tz, row) => {
+            [-3.4, 1.0].forEach((cx) => {
+              addBox(g, 3.4, 0.04, 0.6, FM.counter, cx, 0.6, tz);
+              addBox(g, 3.3, 0.56, 0.04, FM.metal, cx, 0.3, tz - 0.25);
+              [-1.1, 0, 1.1].forEach((dx) => {
+                const sx = cx + dx;
+                const ls = new THREE.Mesh(
+                  new THREE.PlaneGeometry(0.28, 0.18),
+                  SCR.blue,
+                );
+                ls.position.set(sx, 0.74, tz - 0.1);
+                ls.rotation.x = -0.25;
+                g.add(ls);
+                g.add(chair(sx, tz + 0.46, Math.PI));
+                if ((row + dx * 10) % 2 === 0 || row === 0)
+                  g.add(
+                    person({
+                      x: sx,
+                      z: tz + 0.4,
+                      rotY: Math.PI,
+                      role: row % 2 ? "cyber" : "police",
+                    }),
+                  );
+              });
+            });
+          });
+          addGlass(g, 4.4, 0.9, 8.7, 0.9);
+          addGlass(g, 4.4, 0.9, 4.4, 5.9);
+          g.add(
+            desk(6.6, 3.6, 0, { w: 2.0, d: 0.9, exec: true, glow: SCR.amber }),
+          );
+          [6.0, 7.2].forEach((x) =>
+            g.add(
+              chair(x, 2.5, 0, true),
+              person({ x, z: 2.5, role: "police" }),
+            ),
+          );
+          addPlant(g, 8.3, 5.6, 1.1);
+          addPlant(g, 4.9, 5.6, 0.9);
+        }
+      }
+
+      function buildTerrace() {
+        roof = new THREE.Group();
+        roof.position.y = levelY(TERRACE);
+        const fin = new THREE.Mesh(
+          new THREE.PlaneGeometry(SLAB_W - 0.2, SLAB_L - 0.2),
+          MAT.floorConcrete,
+        );
+        fin.rotation.x = -Math.PI / 2;
+        fin.position.y = 0.09;
+        fin.receiveShadow = true;
+        roof.add(fin);
+        const ph = 0.8;
+        [
+          [SLAB_W, 0.25, 0, SLAB_L / 2 - 0.12],
+          [SLAB_W, 0.25, 0, -SLAB_L / 2 + 0.12],
+          [0.25, SLAB_L, SLAB_W / 2 - 0.12, 0],
+          [0.25, SLAB_L, -SLAB_W / 2 + 0.12, 0],
+        ].forEach(([w, d, x, z]) => {
+          addBox(roof, w, ph, d, MAT.parapet, x, ph / 2, z).castShadow = true;
+          addBox(roof, w + 0.06, 0.06, d + 0.06, MAT.walnut, x, ph + 0.03, z);
+        });
+        addBox(roof, 3.0, 1.9, 3.2, MAT.core, -7.2, 0.95, 0).castShadow = true;
+
+        const dishMat = new THREE.MeshStandardMaterial({
+          color: 0xf1f3f6,
+          roughness: 0.35,
+          metalness: 0.2,
+          side: THREE.DoubleSide,
+        });
+        [
+          [-4, -3.5, 0],
+          [-4, 3.0, 0.6],
+        ].forEach(([x, z, ry]) => {
+          const mast = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.1, 0.12, 3.0, 10),
+            FM.chrome,
+          );
+          mast.position.set(x, 1.5, z);
+          const dish = new THREE.Mesh(
+            new THREE.SphereGeometry(1.1, 24, 12, 0, Math.PI),
+            dishMat,
+          );
+          dish.rotation.set(Math.PI / 3, ry, 0);
+          dish.position.set(x, 2.8, z);
+          mast.castShadow = dish.castShadow = true;
+          roof.add(mast, dish);
+        });
+
+        const rf = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.1, 0.24, 5.0, 8),
+          std(0xb5361f, 0.4, 0.3),
+        );
+        rf.position.set(4, 2.5, -3.5);
+        rf.castShadow = true;
+        roof.add(rf);
+        addBox(roof, 0.12, 0.12, 0.12, basic(0xff5555), 4, 5.05, -3.5);
+
+        const tower = new THREE.Group();
+        tower.position.set(2, 0, 2);
+        const tH = 6.0;
+        [
+          [-1, -1],
+          [1, -1],
+          [-1, 1],
+          [1, 1],
+        ].forEach(([sx, sz]) => {
+          const leg = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.05, 0.07, tH, 6),
+            MAT.steel,
+          );
+          leg.position.set(sx * 0.42, tH / 2, sz * 0.42);
+          leg.rotation.z = -sx * 0.06;
+          leg.rotation.x = sz * 0.06;
+          leg.castShadow = true;
+          tower.add(leg);
+        });
+        for (let k = 1; k < 6; k++) {
+          const w = 0.84 - k * 0.11;
+          tower.add(edgeFrame(w, w, (k * tH) / 6, 0.04, 0.04, MAT.steel));
+        }
+        [
+          [0.35, 4.6, 0],
+          [-0.35, 4.2, 0],
+          [0, 3.8, 0.35],
+        ].forEach(([x, y, z]) =>
+          addBox(tower, 0.12, 0.7, 0.12, MAT.white, x, y, z),
+        );
+        addBox(tower, 0.12, 0.12, 0.12, basic(0xff5555), 0, tH + 0.08, 0);
+        roof.add(tower);
+        scene.add(roof);
+      }
+
+      // ---------------------------------------------------------------------
+      //  UI
+      // ---------------------------------------------------------------------
+      function buildSection() {
+        const nav = document.getElementById("section");
+        nav.innerHTML = "";
+        for (let i = FLOORS.length - 1; i >= 0; i--) {
+          if (i === 0) {
+            const gl = document.createElement("div");
+            gl.className = "ground";
+            gl.innerHTML = "<span>Ground level</span>";
+            nav.appendChild(gl);
+          }
+          const b = document.createElement("button");
+          b.className = "sec-row";
+          b.id = `row-${i}`;
+          b.setAttribute(
+            "aria-label",
+            `${FLOORS[i].level}: ${FLOORS[i].title}`,
+          );
+          b.onclick = () => {
+            setStage(i);
+            if (playing) startTimer();
+          };
+          b.innerHTML = `<span class="band${i === TERRACE ? " roof" : ""}"></span><span class="code">${codeOf(i)}</span><span class="name">${FLOORS[i].short}</span>`;
+          nav.appendChild(b);
+        }
+      }
+
+      function updateUI(s) {
+        const f = FLOORS[s];
+        document.getElementById("c-code").textContent = codeOf(s);
+        document.getElementById("c-level").textContent = f.level;
+        document.getElementById("c-title").textContent = f.title;
+        document.getElementById("c-shown").textContent = f.shown;
+        const ul = document.getElementById("c-items");
+        ul.innerHTML = "";
+        f.items.forEach((t) => {
+          const li = document.createElement("li");
+          li.className =
+            "text-[13px] font-medium px-2.5 py-1 rounded-[3px] bg-valley/[0.07]";
+          li.textContent = t;
+          ul.appendChild(li);
+        });
+        document.getElementById("status").textContent =
+          s === TERRACE ? "Terrace and complete building" : f.level;
+        for (let i = 0; i < FLOORS.length; i++) {
+          const r = document.getElementById(`row-${i}`);
+          r.classList.toggle("built", i <= s);
+          r.classList.toggle("active", i === s);
+          r.setAttribute("aria-current", i === s ? "true" : "false");
+        }
+      }
+
+      function renderTags(markers, group) {
+        const box = document.getElementById("labels");
+        box.innerHTML = "";
+        tags = [];
+        markers.forEach((m, k) => {
+          const el = document.createElement("div");
+          el.className = "tag3d pop";
+          el.style.setProperty("--c", m.c);
+          el.style.animationDelay = `${0.35 + k * 0.08}s`;
+          el.innerHTML = `<div class="pill"><span class="dot"></span>${m.name}</div><div class="stem"></div><div class="foot"></div>`;
+          box.appendChild(el);
+          tags.push({ el, local: new THREE.Vector3(...m.pos), group });
+        });
+      }
+
+      const _v = new THREE.Vector3();
+      function placeTags() {
+        const box = document.getElementById("scene");
+        const w = box.clientWidth,
+          h = box.clientHeight;
+        tags.forEach((t) => {
+          _v.copy(t.local);
+          t.group.localToWorld(_v);
+          _v.project(camera);
+          if (_v.z > 1) {
+            t.el.style.opacity = "0";
+            return;
+          }
+          t.el.style.opacity = "1";
+          t.el.style.left = `${(_v.x * 0.5 + 0.5) * w}px`;
+          t.el.style.top = `${(-_v.y * 0.5 + 0.5) * h}px`;
+        });
+      }
+
+      // ---------------------------------------------------------------------
+      //  Stages
+      // ---------------------------------------------------------------------
+      function applyVisibility(s) {
+        const complete = s === TERRACE;
+        floors.forEach((g, i) => {
+          const built = complete || i <= s,
+            active = i === s;
+          g.visible = built;
+          g.userData.ceiling.visible = !active;
+          g.userData.interior.visible = active;
+          if (g.userData.glow) g.userData.glow.visible = !active;
+          if (g.userData.glass) g.userData.glass.visible = true;
+          g.userData.fins.forEach((f) => {
+            f.visible = !active;
+          });
+        });
+        roof.visible = complete;
+      }
+
+      function view(s) {
+        if (s === TERRACE) {
+          const top = levelY(TERRACE);
+          return {
+            cam: { x: 32, y: top + 16, z: 36 },
+            look: { x: 0, y: (levelY(0) + top) / 2 + 2, z: 0 },
+          };
+        }
+        const y = levelY(s);
+        if (s === 0)
+          return {
+            cam: { x: 16, y: y + 17, z: 18 },
+            look: { x: 0, y: y + 0.6, z: 0.5 },
+          };
+        const side = s % 2 === 0 ? 1 : -1;
+        return {
+          cam: { x: 18 * side, y: y + 9.5, z: 17 },
+          look: { x: 0.8, y: y + 0.8, z: 0.4 },
+        };
+      }
+
+      function focus(s) {
+        const v = view(s),
+          d = dur(1400);
+        new TWEEN.Tween(camera.position)
+          .to(v.cam, d)
+          .easing(TWEEN.Easing.Quartic.InOut)
+          .start();
+        new TWEEN.Tween(controls.target)
+          .to(v.look, d)
+          .easing(TWEEN.Easing.Quartic.InOut)
+          .start();
+      }
+
+      function setStage(s) {
+        stage = s;
+        applyVisibility(s);
+        floors.forEach((g, i) => {
+          if (!g.visible) {
+            g.userData.shown = false;
+            return;
+          }
+          if (!g.userData.shown) {
+            g.userData.shown = true;
+            if (RM) {
+              g.position.y = levelY(i);
+              g.scale.y = 1;
+              return;
+            }
+            g.position.y = levelY(i) + 2.2;
+            new TWEEN.Tween(g.position)
+              .to({ y: levelY(i) }, 900)
+              .easing(TWEEN.Easing.Cubic.Out)
+              .start();
+          }
+        });
+        if (s === TERRACE && !RM) {
+          roof.position.y = levelY(TERRACE) + 2.2;
+          new TWEEN.Tween(roof.position)
+            .to({ y: levelY(TERRACE) }, 900)
+            .easing(TWEEN.Easing.Cubic.Out)
+            .start();
+        }
+        updateUI(s);
+        renderTags(FLOORS[s].markers, s === TERRACE ? roof : floors[s]);
+        focus(s);
+      }
+
+      function togglePlay() {
+        playing = !playing;
+        document.getElementById("play-icon").className = playing
+          ? "fa-solid fa-pause text-[12px]"
+          : "fa-solid fa-play text-[12px]";
+        document.getElementById("play-text").textContent = playing
+          ? "Pause"
+          : "Play walkthrough";
+        if (playing) {
+          if (stage === TERRACE) setStage(0);
+          startTimer();
+        } else {
+          clearTimeout(playTimer);
+          clearInterval(timerInt);
+          document.getElementById("timer").style.width = "0";
+        }
+      }
+
+      function startTimer() {
+        clearTimeout(playTimer);
+        clearInterval(timerInt);
+        const d = DWELL / speed,
+          t0 = Date.now(),
+          bar = document.getElementById("timer");
+        bar.style.width = "0";
+        timerInt = setInterval(() => {
+          const p = Math.min(1, (Date.now() - t0) / d);
+          bar.style.width = `${p * 100}%`;
+          if (p >= 1) clearInterval(timerInt);
+        }, 50);
+        playTimer = setTimeout(() => {
+          if (!playing) return;
+          if (stage === TERRACE) {
+            togglePlay();
+            return;
+          }
+          setStage(stage + 1);
+          startTimer();
+        }, d);
+      }
+
+      function nextFloor() {
+        setStage(Math.min(TERRACE, stage + 1));
+        if (playing) startTimer();
+      }
+      function prevFloor() {
+        setStage(Math.max(0, stage - 1));
+        if (playing) startTimer();
+      }
+
+      function toggleExplode() {
+        exploded = !exploded;
+        const b = document.getElementById("btn-explode");
+        b.classList.toggle("on", exploded);
+        b.setAttribute("aria-pressed", exploded);
+        floors.forEach((g, i) =>
+          new TWEEN.Tween(g.position)
+            .to({ y: levelY(i) }, dur(900))
+            .easing(TWEEN.Easing.Back.Out)
+            .start(),
+        );
+        new TWEEN.Tween(roof.position)
+          .to({ y: levelY(TERRACE) }, dur(900))
+          .easing(TWEEN.Easing.Back.Out)
+          .start();
+        focus(stage);
+      }
+      function toggleRotate() {
+        orbit = !orbit;
+        controls.autoRotate = orbit;
+        controls.autoRotateSpeed = 0.7;
+        const b = document.getElementById("btn-rotate");
+        b.classList.toggle("on", orbit);
+        b.setAttribute("aria-pressed", orbit);
+      }
+      function cycleSpeed() {
+        speed = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1;
+        document.getElementById("speed").textContent = `${speed}×`;
+        if (playing) startTimer();
+      }
+      function resetView() {
+        if (playing) togglePlay();
+        if (exploded) toggleExplode();
+        floors.forEach((g) => {
+          g.userData.shown = false;
+        });
+        setStage(0);
+      }
+
+      function onResize() {
+        const box = document.getElementById("scene");
+        camera.aspect = box.clientWidth / box.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(box.clientWidth, box.clientHeight);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        TWEEN.update();
+        controls.update();
+        renderer.render(scene, camera);
+        placeTags();
+      }
+
+      window.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>
